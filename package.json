@@ -1,0 +1,23 @@
+{
+  "name": "ai-interview-coach",
+  "version": "1.0.0",
+  "description": "AI-powered interview coach using GPT for feedback",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "marked": "^9.1.5",
+    "moment": "^2.29.4",
+    "openai": "^4.20.1",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+} 

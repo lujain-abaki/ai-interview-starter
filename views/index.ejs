@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview Coach</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.5/marked.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <nav class="top-nav">
+            <div class="nav-brand">
+                <i class="fas fa-robot"></i>
+                <h1>AI Interview Coach</h1>
+            </div>
+            <div class="nav-links">
+                <% if (interviewHistory && interviewHistory.length > 0) { %>
+                    <button id="history-btn" class="btn-secondary">
+                        <i class="fas fa-history"></i> History
+                    </button>
+                <% } %>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <section id="setup-section" class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-cog"></i> Interview Setup</h2>
+                    <p>Configure your interview settings to get started</p>
+                </div>
+                <form id="setup-form">
+                    <div class="form-group">
+                        <label for="jobTitle">
+                            <i class="fas fa-briefcase"></i> Job Title
+                        </label>
+                        <input type="text" id="jobTitle" required placeholder="e.g., Frontend Developer, Product Manager, Data Scientist">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jobDescription">
+                            <i class="fas fa-file-alt"></i> Job Description (optional)
+                        </label>
+                        <textarea id="jobDescription" rows="4" placeholder="Paste the job description here to get more targeted questions..."></textarea>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-layer-group"></i> Role Level
+                            </label>
+                            <div class="radio-group">
+                                <div class="radio-option">
+                                    <input type="radio" id="junior" name="level" value="junior">
+                                    <label for="junior">
+                                        <i class="fas fa-seedling"></i>
+                                        <div>
+                                            Junior
+                                            <span class="option-description">0-2 years of experience, entry-level positions</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="mid" name="level" value="mid" checked>
+                                    <label for="mid">
+                                        <i class="fas fa-star"></i>
+                                        <div>
+                                            Mid-Level
+                                            <span class="option-description">2-5 years of experience, intermediate roles</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="senior" name="level" value="senior">
+                                    <label for="senior">
+                                        <i class="fas fa-crown"></i>
+                                        <div>
+                                            Senior
+                                            <span class="option-description">5+ years of experience, leadership roles</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-tasks"></i> Interview Style
+                            </label>
+                            <div class="radio-group">
+                                <div class="radio-option">
+                                    <input type="radio" id="behavioral" name="style" value="behavioral">
+                                    <label for="behavioral">
+                                        <i class="fas fa-users"></i>
+                                        <div>
+                                            Behavioral
+                                            <span class="option-description">Focus on past experiences and soft skills</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="technical" name="style" value="technical">
+                                    <label for="technical">
+                                        <i class="fas fa-code"></i>
+                                        <div>
+                                            Technical
+                                            <span class="option-description">Focus on technical skills and problem-solving</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="mixed" name="style" value="mixed" checked>
+                                    <label for="mixed">
+                                        <i class="fas fa-random"></i>
+                                        <div>
+                                            Mixed
+                                            <span class="option-description">Balanced mix of behavioral and technical questions</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="button-container">
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-play"></i> Start Interview
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <div class="interview-feedback-container">
+                <section id="interview-section" class="card hidden">
+                    <div class="card-header">
+                        <h2><i class="fas fa-comments"></i> Interview in Progress</h2>
+                        <div class="progress-indicator">
+                            Question <span id="current-question-num">1</span> of <span id="total-questions">5</span>
+                        </div>
+                    </div>
+
+                    <div class="question-container">
+                        <div class="question-main">
+                            <h3><i class="fas fa-question-circle"></i> Question:</h3>
+                            <p id="current-question-text"></p>
+                        </div>
+                        <div class="question-context">
+                            <h4><i class="fas fa-info-circle"></i> Context:</h4>
+                            <p id="current-question-context"></p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="answer">
+                            <i class="fas fa-pen"></i> Your Answer:
+                        </label>
+                        <div class="answer-container">
+                            <textarea id="answer" rows="6" placeholder="Type your answer here..."></textarea>
+                            <div class="word-count">
+                                Words: <span id="word-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button id="submit-answer" class="btn-primary">
+                            <i class="fas fa-paper-plane"></i> Submit Answer
+                        </button>
+                        <button id="next-question" class="btn-secondary hidden">
+                            <i class="fas fa-arrow-right"></i> Next Question
+                        </button>
+                    </div>
+                </section>
+
+                <section id="feedback-section" class="card hidden">
+                    <div class="card-header">
+                        <h2><i class="fas fa-chart-bar"></i> Real-time Feedback</h2>
+                    </div>
+                    <div id="feedback-container" class="feedback-container">
+                        <div class="feedback-summary">
+                            <div class="rating">
+                                <h3>Overall Rating</h3>
+                                <div class="stars">
+                                    <div id="rating-stars"></div>
+                                </div>
+                            </div>
+                            <div class="highlights">
+                                <h3>Key Highlights</h3>
+                                <ul id="highlights-list"></ul>
+                            </div>
+                        </div>
+                        <div class="feedback-details"></div>
+                    </div>
+                </section>
+            </div>
+
+            <section id="summary-section" class="card hidden">
+                <div class="card-header">
+                    <h2><i class="fas fa-flag-checkered"></i> Interview Summary</h2>
+                </div>
+                <div id="summary-container"></div>
+            </section>
+        </main>
+
+        <div id="history-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-history"></i> Interview History</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <% if (interviewHistory && interviewHistory.length > 0) { %>
+                        <div class="history-list">
+                            <% interviewHistory.forEach(function(interview) { %>
+                                <div class="history-item">
+                                    <div class="history-info">
+                                        <h3><%= interview.jobTitle %></h3>
+                                        <p><%= moment(interview.date).format('MMMM D, YYYY h:mm A') %></p>
+                                    </div>
+                                    <button class="btn-secondary view-summary" data-session="<%= interview.sessionId %>">
+                                        View Summary
+                                    </button>
+                                </div>
+                            <% }); %>
+                        </div>
+                    <% } else { %>
+                        <p class="no-history">No interview history available.</p>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let sessionId = null;
+
+        // Word count functionality
+        document.getElementById('answer').addEventListener('input', function() {
+            const words = this.value.trim().split(/\s+/).filter(word => word.length > 0);
+            document.getElementById('word-count').textContent = words.length;
+        });
+
+        // Setup form submission
+        document.getElementById('setup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showLoading('Preparing your interview questions...');
+
+            const formData = {
+                jobTitle: document.getElementById('jobTitle').value,
+                jobDescription: document.getElementById('jobDescription').value,
+                level: document.querySelector('input[name="level"]:checked').value,
+                style: document.querySelector('input[name="style"]:checked').value
+            };
+
+            try {
+                const response = await fetch('/interview/generate-questions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                sessionId = data.sessionId;
+                currentQuestions = data.questions;
+                socket.emit('startInterview', { sessionId });
+                
+                hideLoading();
+                document.getElementById('setup-section').classList.add('hidden');
+                document.getElementById('interview-section').classList.remove('hidden');
+                showQuestion(0);
+            } catch (error) {
+                hideLoading();
+                showError('Failed to generate questions. Please try again.');
+            }
+        });
+
+        // Submit answer
+        document.getElementById('submit-answer').addEventListener('click', async () => {
+            const answer = document.getElementById('answer').value;
+            if (!answer.trim()) {
+                showError('Please provide an answer before submitting.');
+                return;
+            }
+
+            showLoading('Analyzing your answer...');
+            try {
+                const response = await fetch('/interview/evaluate-answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId,
+                        questionIndex: currentQuestionIndex,
+                        answer
+                    })
+                });
+                const feedback = await response.json();
+                
+                if (feedback.error) {
+                    showError(feedback.error);
+                    return;
+                }
+
+                hideLoading();
+                showFeedback(feedback);
+                
+                document.getElementById('submit-answer').classList.add('hidden');
+                document.getElementById('next-question').classList.remove('hidden');
+            } catch (error) {
+                hideLoading();
+                showError('Failed to get feedback. Please try again.');
+            }
+        });
+
+        // Next question
+        document.getElementById('next-question').addEventListener('click', () => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < currentQuestions.length) {
+                document.getElementById('answer').value = '';
+                document.getElementById('word-count').textContent = '0';
+                document.getElementById('feedback-section').classList.add('hidden');
+                document.getElementById('submit-answer').classList.remove('hidden');
+                document.getElementById('next-question').classList.add('hidden');
+                showQuestion(currentQuestionIndex);
+            } else {
+                showInterviewSummary();
+            }
+        });
+
+        // Show question
+        function showQuestion(index) {
+            const question = currentQuestions[index];
+            document.getElementById('current-question-text').textContent = question.main;
+            document.getElementById('current-question-context').textContent = question.context;
+            document.getElementById('current-question-num').textContent = index + 1;
+            document.getElementById('total-questions').textContent = currentQuestions.length;
+        }
+
+        // Show feedback
+        function showFeedback(feedback) {
+            const container = document.getElementById('feedback-container');
+            
+            // Show rating
+            const ratingStars = document.getElementById('rating-stars');
+            ratingStars.innerHTML = Array(5).fill(0).map((_, i) => 
+                `<i class="fas fa-star ${i < feedback.overall_rating ? 'active' : ''}"></i>`
+            ).join('');
+
+            // Show highlights
+            const highlightsList = document.getElementById('highlights-list');
+            highlightsList.innerHTML = feedback.highlights.map(highlight => 
+                `<li><i class="fas fa-check"></i> ${highlight}</li>`
+            ).join('');
+
+            // Show detailed feedback with animation
+            const detailsContainer = container.querySelector('.feedback-details');
+            detailsContainer.innerHTML = `
+                <div class="feedback-item animate-fade-in">
+                    <h3><i class="fas fa-bullseye"></i> Technical Accuracy</h3>
+                    <p>${feedback.technical_accuracy}</p>
+                </div>
+                <div class="feedback-item animate-fade-in">
+                    <h3><i class="fas fa-comment-alt"></i> Clarity</h3>
+                    <p>${feedback.clarity}</p>
+                </div>
+                <div class="feedback-item animate-fade-in">
+                    <h3><i class="fas fa-layer-group"></i> Completeness</h3>
+                    <p>${feedback.completeness}</p>
+                </div>
+                <div class="feedback-item animate-fade-in">
+                    <h3><i class="fas fa-arrow-up"></i> Areas for Improvement</h3>
+                    <p>${feedback.improvements}</p>
+                </div>
+                <div class="feedback-item animate-fade-in">
+                    <h3><i class="fas fa-question-circle"></i> Suggested Follow-up</h3>
+                    <p>${feedback.follow_up_recommendation}</p>
+                </div>
+            `;
+
+            // Show feedback section if hidden
+            document.getElementById('feedback-section').classList.remove('hidden');
+        }
+
+        // Add this new CSS to handle animations
+        const style = document.createElement('style');
+        style.textContent = `
+            .animate-fade-in {
+                animation: fadeIn 0.5s ease-out forwards;
+                opacity: 0;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            .feedback-item:nth-child(1) { animation-delay: 0s; }
+            .feedback-item:nth-child(2) { animation-delay: 0.1s; }
+            .feedback-item:nth-child(3) { animation-delay: 0.2s; }
+            .feedback-item:nth-child(4) { animation-delay: 0.3s; }
+            .feedback-item:nth-child(5) { animation-delay: 0.4s; }
+        `;
+        document.head.appendChild(style);
+
+        // Show interview summary
+        async function showInterviewSummary() {
+            showLoading('Generating interview summary...');
+            try {
+                const response = await fetch(`/interview/summary/${sessionId}`);
+                const summary = await response.json();
+                
+                if (summary.error) {
+                    showError(summary.error);
+                    return;
+                }
+
+                const container = document.getElementById('summary-container');
+                container.innerHTML = `
+                    <div class="summary-header">
+                        <div class="summary-score">
+                            <h3>Overall Score</h3>
+                            <div class="score">${summary.interview_score}/5</div>
+                        </div>
+                        <div class="summary-performance">
+                            <p>${summary.overall_performance}</p>
+                        </div>
+                    </div>
+                    <div class="summary-areas">
+                        <div class="strengths">
+                            <h3><i class="fas fa-star"></i> Strongest Areas</h3>
+                            <ul>
+                                ${summary.strongest_areas.map(area => `<li>${area}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="improvements">
+                            <h3><i class="fas fa-arrow-up"></i> Areas for Improvement</h3>
+                            <ul>
+                                ${summary.areas_for_improvement.map(area => `<li>${area}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="summary-recommendations">
+                        <h3><i class="fas fa-lightbulb"></i> Recommendations</h3>
+                        <ul>
+                            ${summary.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div class="summary-details">
+                        ${summary.detailed_summary_html}
+                    </div>
+                `;
+
+                hideLoading();
+                document.getElementById('interview-section').classList.add('hidden');
+                document.getElementById('feedback-section').classList.add('hidden');
+                document.getElementById('summary-section').classList.remove('hidden');
+            } catch (error) {
+                hideLoading();
+                showError('Failed to generate interview summary.');
+            }
+        }
+
+        // History modal functionality
+        const historyBtn = document.getElementById('history-btn');
+        const historyModal = document.getElementById('history-modal');
+        const closeModal = document.querySelector('.close-modal');
+
+        if (historyBtn) {
+            historyBtn.addEventListener('click', () => {
+                historyModal.classList.remove('hidden');
+            });
+        }
+
+        if (closeModal) {
+            closeModal.addEventListener('click', () => {
+                historyModal.classList.add('hidden');
+            });
+        }
+
+        // View summary buttons
+        document.querySelectorAll('.view-summary').forEach(button => {
+            button.addEventListener('click', async () => {
+                const sessionId = button.dataset.session;
+                historyModal.classList.add('hidden');
+                showInterviewSummary(sessionId);
+            });
+        });
+
+        // Loading indicator
+        function showLoading(message) {
+            const loading = document.createElement('div');
+            loading.className = 'loading-overlay';
+            loading.innerHTML = `
+                <div class="loading-content">
+                    <div class="spinner"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+            document.body.appendChild(loading);
+        }
+
+        function hideLoading() {
+            const loading = document.querySelector('.loading-overlay');
+            if (loading) {
+                loading.remove();
+            }
+        }
+
+        // Error message
+        function showError(message) {
+            const error = document.createElement('div');
+            error.className = 'error-message';
+            error.innerHTML = `
+                <div class="error-content">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>${message}</p>
+                </div>
+            `;
+            document.body.appendChild(error);
+            setTimeout(() => error.remove(), 5000);
+        }
+
+        // Socket.IO events
+        socket.on('interviewStarted', (data) => {
+            console.log('Interview session started:', data.sessionId);
+        });
+
+        socket.on('processingAnswer', () => {
+            showLoading('Processing your answer...');
+        });
+    </script>
+</body>
+</html> 
